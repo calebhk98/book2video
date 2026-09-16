@@ -1,0 +1,223 @@
+# Book2Video example configuration.
+# Copy this file to config.toml. With the default action below, running:
+#
+#   book2video
+#
+# starts the local Studio server and opens the browser. Most day-to-day choices can
+# then be changed from the page rather than remembered as CLI flags.
+
+# Inline chapter text used only when the selected chapter source asks for config TOML
+# and chapter_path is empty.
+chapter_text = ""
+
+# Optional fixed chapter file used by the "Config TOML" browser source.
+# chapter_path = "./chapter01.md"
+
+# Run folders, cached planning outputs, generated takes, and rough cuts.
+output_root = "./book2video_output"
+
+# Optional JSON registry for canonical characters/locations, aliases, profile text,
+# reference images, and voice references.
+asset_registry_path = "./examples/assets.example.json"
+
+# Optional project-knowledge files. The browser can temporarily replace this list.
+knowledge_paths = []
+
+# Named profiles make it possible to keep several models configured at once.
+# The browser dropdown can switch between them without deleting older settings.
+active_llm_profile = "mock"
+active_video_profile = "mock"
+
+[defaults]
+# Options:
+#   "studio"   -> open the browser control center (recommended everyday default)
+#   "run"      -> run directly from TOML/CLI settings
+#   "viewer"   -> open the older standalone review viewer
+#   "assemble" -> rebuild the newest/fixed run's rough_cut.mp4
+# The Studio path is being used by default so model/chapter choices can happen in
+# the browser rather than through flags.
+action = "studio"
+
+# Used only by direct no-browser/default.action="run" behavior.
+# Options:
+#   "config" -> use chapter_path when set, otherwise chapter_text
+#   "path"   -> require chapter_path
+#   "text"   -> require chapter_text
+#   "picker" -> try a desktop tkinter file picker
+chapter_source = "config"
+
+# These settings are also used by the Studio server.
+open_browser = true
+viewer_host = "127.0.0.1"
+viewer_port = 8765
+
+# The standalone viewer may still be launched after a direct CLI run.
+launch_viewer_after_run = true
+
+# If true, changing a take rebuilds rough_cut.mp4 immediately. The live browser
+# playlist changes without this, so false is being tried as the cheaper default.
+auto_assemble_on_selection = false
+
+# If true, review mode keeps previous/current/next clips loaded in separate video
+# elements to reduce pauses at ordinary cuts. Browser buffering policy still applies.
+viewer_preload_adjacent = true
+
+# -----------------------------------------------------------------------------
+# LLM profiles
+# -----------------------------------------------------------------------------
+# label and description are optional UI metadata. class_path and options are what
+# the provider loader actually uses.
+
+[llm_profiles.mock]
+label = "Mock LLM"
+description = "No-network orchestration test provider. Useful for checking the pipeline/UI without spending tokens."
+class_path = "book2video.providers.mock_llm:MockLLMProvider"
+
+[llm_profiles.ollama]
+label = "Ollama (local)"
+description = "Local Ollama model. A vision-capable model is useful if the judge should inspect generated video frames."
+class_path = "book2video.providers.ollama_llm:OllamaLLMProvider"
+[llm_profiles.ollama.options]
+model = "YOUR_VISION_MODEL"
+base_url = "http://127.0.0.1:11434"
+video_frame_samples = 6
+
+[llm_profiles.vllm]
+label = "vLLM / OpenAI-compatible (local)"
+description = "Local OpenAI-compatible endpoint such as vLLM or LM Studio."
+class_path = "book2video.providers.openai_compatible_llm:OpenAICompatibleLLMProvider"
+[llm_profiles.vllm.options]
+model = "YOUR_LOCAL_MODEL"
+base_url = "http://127.0.0.1:8000/v1"
+api_key = ""
+video_frame_samples = 6
+# If this profile owns the local server, these can make the phase swap actually free VRAM.
+# prepare_command = ["systemctl", "--user", "start", "book2video-vllm"]
+# release_command = ["systemctl", "--user", "stop", "book2video-vllm"]
+
+[llm_profiles.openai]
+label = "OpenAI (online)"
+description = "Online OpenAI adapter. OPENAI_API_KEY is read from the environment unless explicitly supplied."
+class_path = "book2video.providers.openai_llm:OpenAILLMProvider"
+[llm_profiles.openai.options]
+model = "YOUR_OPENAI_MODEL"
+video_frame_samples = 6
+
+[llm_profiles.gemini]
+label = "Gemini (online)"
+description = "Online Gemini adapter. GEMINI_API_KEY is read from the environment unless explicitly supplied."
+class_path = "book2video.providers.gemini_llm:GeminiLLMProvider"
+[llm_profiles.gemini.options]
+model = "YOUR_GEMINI_MODEL"
+video_frame_samples = 6
+
+# -----------------------------------------------------------------------------
+# Video profiles
+# -----------------------------------------------------------------------------
+
+[video_profiles.mock]
+label = "Mock video"
+description = "Creates dummy MP4s for end-to-end UI and orchestration testing."
+class_path = "book2video.providers.mock_video:MockVideoProvider"
+[video_profiles.mock.options]
+max_duration_sec = 10.0
+simulated_delay_sec = 0.0
+
+[video_profiles.wan_command]
+label = "Wan / LightX2V command wrapper (local)"
+description = "Local native wrapper profile. Point command at a small script that translates Book2Video request JSON into your chosen Wan/LightX2V invocation."
+class_path = "book2video.providers.command_video:CommandVideoProvider"
+[video_profiles.wan_command.options]
+max_duration_sec = 10.0
+supports_multi_gpu_job = true
+# Optional planning hint. Leave it commented until the chosen checkpoint/runtime has a useful estimate.
+# estimated_vram_gb = 36.0
+# Optional phase lifecycle commands can preload/start and unload/stop a local runtime.
+# prepare_command = ["systemctl", "--user", "start", "book2video-wan"]
+# release_command = ["systemctl", "--user", "stop", "book2video-wan"]
+command = ["python", "./my_wan_wrapper.py", "--request", "{{REQUEST_JSON}}", "--output", "{{OUTPUT}}"]
+
+[video_profiles.comfyui]
+label = "ComfyUI (local)"
+description = "Local ComfyUI API workflow. Two servers can be mapped to cuda:0 and cuda:1 for independent workers."
+class_path = "book2video.providers.comfyui_video:ComfyUIVideoProvider"
+[video_profiles.comfyui.options]
+workflow_path = "./workflows/wan22_i2v_api.json"
+max_duration_sec = 10.0
+server_url = "http://127.0.0.1:8188"
+[video_profiles.comfyui.options.server_by_device]
+"cuda:0" = "http://127.0.0.1:8188"
+"cuda:1" = "http://127.0.0.1:8189"
+
+[video_profiles.runway]
+label = "Runway (online)"
+description = "Runway model-router adapter. RUNWAYML_API_SECRET is read from the environment."
+class_path = "book2video.providers.runway_video:RunwayVideoProvider"
+[video_profiles.runway.options]
+config_id = "preview-fast"
+max_duration_sec = 30.0
+aspect_ratio = "16:9"
+
+[video_profiles.replicate]
+label = "Replicate (online)"
+description = "Generic Replicate adapter. Change the model ID and input template for the specific video model."
+class_path = "book2video.providers.replicate_video:ReplicateVideoProvider"
+[video_profiles.replicate.options]
+model = "OWNER/MODEL"
+max_duration_sec = 10.0
+output_path = "output"
+[video_profiles.replicate.options.input_template]
+prompt = "{{PROMPT}}"
+duration = "{{DURATION}}"
+seed = "{{SEED}}"
+reference_images = "{{REFERENCE_DATA_URIS}}"
+
+[generation]
+# Initial alternatives generated for every physical clip.
+takes_per_clip = 3
+
+# Extra batches allowed when the automated judge rejects the current candidates.
+# Zero disables automatic regeneration.
+max_regeneration_rounds = 1
+
+# Stable base for derived seeds where the provider supports seeds.
+seed_base = 1000
+
+# GPU selection:
+#   "auto"   -> re-detect NVIDIA GPUs at the start of every run. Adding, replacing, or losing a
+#               card therefore does not depend on saved cuda indices.
+#   "manual" -> use worker_device_groups exactly as written below.
+device_mode = "auto"
+
+# Automatic strategy:
+#   "one_per_gpu" -> one independent video worker per GPU when the model appears to fit one card.
+#                    If a video profile supplies estimated_vram_gb and no card fits, the planner can
+#                    group cards when that provider advertises multi-GPU support.
+#   "all_gpus"    -> prefer one distributed worker containing every eligible GPU.
+auto_device_strategy = "one_per_gpu"
+
+# Planning headroom. This does not reserve CUDA memory; it keeps the auto planner from assuming the
+# model can use every last GB reported by the card.
+reserve_vram_gb = 1.0
+
+# Optional mixed-GPU filter. Zero means every detected NVIDIA GPU may be considered.
+min_gpu_memory_gb = 0.0
+
+# Used only when device_mode = "manual". Examples:
+#   [["cuda:0"], ["cuda:1"]] -> two independent workers
+#   [["cuda:0", "cuda:1"]]   -> one provider call receives both cards
+worker_device_groups = []
+
+# When true, planning + prompt compilation are completed while the LLM is resident, then the LLM
+# gets a release hook before the video phase. Video takes are batched, then the video provider gets
+# a release hook before the LLM is used again for judging. Regeneration rounds repeat that swap.
+# Cloud adapters treat these hooks as no-ops; local adapters can actually unload/start/stop models.
+phase_swap_local_models = true
+
+[review]
+# Judge thresholds use 0.0-1.0. They remain editable in the browser because a rough
+# cut may reasonably tolerate defects that a final render would reject.
+min_identity = 0.72
+min_continuity = 0.60
+min_story_fidelity = 0.72
+min_visual_quality = 0.55

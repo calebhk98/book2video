@@ -1,0 +1,34 @@
+{
+  "characters": [
+    {
+      "id": "CHLOE",
+      "display_name": "Chloe",
+      "aliases": ["Chloe"],
+      "profile_text": "Six-year-old child. Replace this with the canonical profile or profile_path.",
+      "profile_heading": null,
+      "reference_images": ["/path/to/chloe_reference.png"],
+      "voice_reference_files": [],
+      "movement_notes": "Replace with canonical movement notes."
+    },
+    {
+      "id": "MOM",
+      "display_name": "Chloe's Mom",
+      "aliases": ["Mom", "her mom", "Chloe's mother"],
+      "profile_text": "Replace with canonical profile or profile_path.",
+      "profile_heading": null,
+      "reference_images": ["/path/to/mom_reference.png"],
+      "voice_reference_files": [],
+      "movement_notes": "Replace with canonical movement notes."
+    }
+  ],
+  "locations": [
+    {
+      "id": "HOUSE_KITCHEN_LIVING",
+      "display_name": "House kitchen / living room",
+      "aliases": ["kitchen", "living room", "house"],
+      "profile_text": "Replace with a canonical location description.",
+      "profile_heading": null,
+      "reference_images": ["/path/to/house_reference.png"]
+    }
+  ]
+}
